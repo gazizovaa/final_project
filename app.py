@@ -9,6 +9,7 @@ import random
 import sklearn
 import io 
 from helper_functions import walk_through_dir, plot_loss_curves, compare_historys
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
 from PIL import Image 
 import pickle
 import shutil
@@ -224,7 +225,8 @@ train_data, test_data = load_data()
 # Sidebar
 choice = st.sidebar.radio("Selections", ["Dataset Overview", "Fitting the Model", "Preprocessing", 
                                          "Data Augmentation", "Transfer Learning", "Fine Tuning", 
-                                         "VLM (Vision Language Model)", "Drugs and Vitamins Detection"])
+                                         "VLM (Vision Language Model)", "Drugs and Vitamins Detection",
+                                         "Performance Evaluation Metrics"])
 
 if choice == "Dataset Overview":
     st.subheader("Dataset Overview")
@@ -498,3 +500,63 @@ elif choice == "Drugs and Vitamins Detection":
                         st.error(f"Error with {model_name}: {e}")
         else:
             st.warning("Please train the models first.")
+
+elif choice == "Performance Evaluation Metrics":
+    st.subheader("Performance Evaluation Metrics")
+
+    # Create a dictionary for metrics metadata
+    models_performance = {
+        'Model': [],
+        'Accuracy': [],
+        'Precision': [],
+        'Recall': [],
+        'F1 Score': [],
+        'ROC-AUC Curve': []
+        }
+
+    y_true = test_data.classes 
+
+    for i, (model_name, model) in enumerate(st.session_state.models.items()):
+        st.write(f"Hesablanır: {model_name}")
+        y_pred = model.predict(test_data)
+        y_pred_classes = np.argmax(y_pred, axis=1)
+
+        # Metrics
+        accuracy = accuracy_score(y_true, y_pred_classes) 
+        precision = precision_score(y_true, y_pred_classes)
+        recall = recall_score(y_true, y_pred_classes)
+        f1 = f1_score(y_true, y_pred_classes)
+        roc_auc_curve = roc_auc_score(y_true, y_pred_classes)
+
+        models_performance['Model'].append(model_name)  
+        models_performance['Accuracy'].append(accuracy)
+        models_performance['Precision'].append(precision)
+        models_performance['Recall'].append(recall)
+        models_performance['F1 Score'].append(f1)
+        models_performance['ROC-AUC Curve'].append(roc_auc_curve) 
+    
+    # Create dataframe to save metrics information
+    df_perf_metrics = pd.DataFrame(models_performance)
+
+    # Show the dataframe as a table
+    st.dataframe(df_perf_metrics.style.format(precision=2))
+
+    # Create a selectbox
+    metrics_choice = st.selectbox("Select a metric:",
+                                  ['Accuracy', 'Precision', 'Recall', 'F1 Score', 'ROC-AUC Curve'])
+    fig, ax = plt.subplots(figsize=(10, 6))
+    bars = ax.bar(df_perf_metrics['Model'], df_perf_metrics[metrics_choice], color='skyblue')
+    ax.set_title(f"{metrics_choice} Comparison Across Models")
+    plt.xticks(rotation=45)
+
+    for bar in bars:
+        height = bar.get_height()
+        ax.annotate(f'{height:.2f}',
+                    xy = (bar.get_x() + bar.get_width() / 2, height),
+                    xytext = (0, 3),
+                    textcoords = "offset points",
+                    ha = "center", var = "bottom")
+        
+    plt.tight_layout()
+    st.pyplot(fig) 
+        
