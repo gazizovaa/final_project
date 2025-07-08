@@ -40,14 +40,28 @@ def load_multiple_models():
 
     for model_name, path in model_paths.items():
         if os.path.exists(path):
-            try:
-                models[model_name] = tf.keras.models.load_model(path) 
-                st.success(f"{model_name} loaded successfully!")
-            except Exception as e:
-                st.warning(f"Error loading {model_name}: {e}")
+            models[model_name] = tf.keras.models.load_model(path)
+            st.success(f"{model_name} loaded successfully!")
         else:
-            st.info(f"{model_name} not found at {path}.")
+            st.info(f"{model_name} is not found at {path}.")
+    # for model_name, path in model_paths.items():
+    #     if os.path.exists(path):
+    #         try:
+    #             models[model_name] = tf.keras.models.load_model(path) 
+    #             st.success(f"{model_name} loaded successfully!")
+    #         except Exception as e:
+    #             st.warning(f"Error loading {model_name}: {e}")
+    #     else:
+    #         st.info(f"{model_name} not found at {path}.")
     return models 
+
+@st.cache_data
+def load_training_history(model_name):
+    history_path = f'training_history/{model_name}_history.pkl'  
+    if os.path.exists(history_path):
+        with open(history_path, 'rb') as f:
+            return pickle.load(f)
+    return None 
 
 def save_model(model, model_name):
     os.makedirs('saved_models', exist_ok=True)
@@ -57,24 +71,14 @@ def save_model(model, model_name):
 
 def save_training_history(history, model_name):
     os.makedirs('training_history', exist_ok=True)
-    history_path = f'training_history/{model_name}_history.pkl'  # Fixed typo
-
+    history_path = f'training_history/{model_name}_history.pkl'  
     with open(history_path, 'wb') as f:
         pickle.dump(history.history, f) 
-
     st.success(f"Training history saved to {history_path}.")
-
-@st.cache_data
-def load_training_history(model_name):
-    history_path = f'training_history/{model_name}_history.pkl'  # Fixed typo
-    if os.path.exists(history_path):
-        with open(history_path, 'rb') as f:
-            return pickle.load(f)
-    return None 
 
 # Session State Management
 def initialize_session_state():
-    if 'models_loaded' not in st.session_state:  # Fixed typo
+    if 'models_loaded' not in st.session_state:  
         st.session_state.models_loaded = False
         st.session_state.models = {}
         st.session_state.training_complete = False
@@ -112,19 +116,62 @@ def download_dataset():
 # Try to download dataset
 download_dataset()
 
+# Create train/test directories
+def create_train_and_test_directories():
+    train_dir = 'train'
+    test_dir = 'test'
+
+    # Delete the existing folders beforehand
+    if os.path.exists(train_dir):
+        shutil.rmtree(train_dir) 
+    if os.path.exists(test_dir):
+        shutil.rmtree(test_dir)
+
+    # Create new directories
+    os.makedirs(train_dir, exist_ok=True)
+    os.makedirs(test_dir, exist_ok=True) 
+
+    dir_path = "data/Drug Vision/Data Combined"
+
+    # Copy files to train directory
+    progress_text = "Copying train images. Please wait..."
+    train_dir_progress = st.progress(0, text=progress_text)
+    for i, file in enumerate(train_data.filenames):
+        parts = file.split('/')
+        if len(parts) >= 2:
+            class_name = parts[0]
+            file_name = parts[1]
+            src = os.path.join(dir_path. class_name, file_name)
+            train_target_dir = os.path.join(train_dir, class_name)
+            os.makedirs(train_target_dir, exist_ok=True)
+            train_folder = os.path.join(train_target_dir, file_name)
+
+            if os.path.exists(src) and not os.path.exists(train_folder):
+                shutil.copy2(src, train_folder)
+
+        update_progress = (i + 1) / len(train_data.filenames)
+        train_dir_progress.progress(update_progress)
+
+    progress_text2 = "Copying test images. Please wait..."
+    test_dir_progress = st.progress(0, text=progress_text2)
+    for i, file in enumerate(test_data.filenames):
+        parts = file.split('/')
+        if len(parts) >= 2:
+            class_name = parts[0]
+            file_name = parts[1]
+            src = os.path.join(dir_path, class_name, file_name)
+            test_target_dir = os.path.join(test_dir, class_name)
+            os.makedirs(test_target_dir, exist_ok=True)
+            test_folder = os.path.join(test_target_dir, file_name) 
+
+            if os.path.exists(src) and not os.path.exists(test_folder):
+                shutil.copy2(src, test_folder)
+        
+        update_progress2 = (i + 1) / len(test_data.filenames)
+        test_dir_progress.progress(update_progress2) 
+
 # Model creation function
 def get_or_create_models():
-    if not st.session_state.models_loaded:  # Fixed typo
-        st.info("Loading saved models...")
-        saved_models = load_multiple_models()
-
-        if saved_models:
-            st.session_state.models.update(saved_models)
-            st.session_state.models_loaded = True 
-            return saved_models
-        else:
-            st.warning("No saved models found. Models will be created when needed.")
-    
     # Create the models if they are not loaded
     if not st.session_state.models:
         # Model 1 - CNN
@@ -194,10 +241,6 @@ st.title("Pharmaceutical Drugs and Vitamins Synthetic Images App")
 # Initialize data loading
 @st.cache_resource 
 def load_data():
-    if not os.path.exists("data/Drug Vision/Data Combined"):
-        st.error("Dataset not found. Please ensure the dataset is downloaded.")
-        return None, None
-    
     dir_path = "data/Drug Vision/Data Combined"
     IMG_SIZE = (224, 224)
     BATCH_SIZE = 32
@@ -261,11 +304,6 @@ if choice == "Dataset Overview":
 
 elif choice == "Fitting the Model":
     st.subheader("Fitting the Model")
-    
-    if train_data is None or test_data is None:
-        st.error("Data not loaded. Please check the dataset.")
-        st.stop()
-    
     models = get_or_create_models()
     
     if st.button("Train all models"):
@@ -328,7 +366,7 @@ elif choice == "Fitting the Model":
                     monitor='val_loss',
                     patience=3,
                     restore_best_weights=True
-                )
+                ) 
                 
                 # Train
                 history = model.fit(
@@ -345,7 +383,7 @@ elif choice == "Fitting the Model":
                 save_training_history(history, model_name)
                 
                 # Store in session state
-                st.session_state[f"{model_name}_history"] = history.history
+                st.session_state[f"{model_name}_history"] = history
             
             st.session_state.training_complete = True
             st.success("All models trained successfully!")
@@ -460,8 +498,75 @@ elif choice == "Transfer Learning":
 
 elif choice == "Fine Tuning":
     st.subheader("Fine Tuning")
-    st.write("This section would show fine-tuning results.")
-    st.info("Fine-tuning functionality can be implemented after basic training is complete.")
+    if 'model_2' not in st.session_state.models:
+        st.error("Model 2 (InceptionV3) not found. Please train it first.")
+        st.stop()
+    
+    if 'model_2_history' not in st.session_state:
+        st.error("Model 2 training history not found. Please train it first.")
+        st.stop() 
+    
+    get_model_2 = st.session_state.models['model_2']
+    initial_history = st.session_state['model_2_history']
+
+    st.write("Before Fine-Tuning:")
+    get_model_2_layers = get_model_2.layers
+
+    for layer_number, layer in enumerate(get_model_2_layers):
+        st.write(f"Layer number: {layer_number} | Layer name: {layer.name} | Trainable?: {layer.trainable}")
+    get_model_2_base_model = get_model_2_layers[2] 
+
+    st.write(get_model_2_base_model.name) 
+    get_model_2_base_model.trainable = False
+
+    # How many layers are trainable in our model_2_base_model
+    st.write(len(get_model_2_base_model.trainable_variables))
+
+    # Check which layers are tunable (trainable)
+    for layer_number, layer in enumerate(get_model_2_layers):
+        st.write(layer_number, layer.name, layer.trainable)
+
+    # Make all the layers in model_2_base_model trainable
+    get_model_2_base_model.trainable = True
+    
+    # Freeze all layers except for the last 10
+    for layer in get_model_2_base_model.layers[:-10]:
+        layer.trainable = False
+    
+    get_model_2.compile(loss='categorical_crossentropy',
+                        optimizer=tf.keras.optimizers.Adam(learning_rate=1e-4),
+                        metrics=['accuracy'])
+    
+    for layer_number, layer in enumerate(get_model_2_base_model.layers):
+        print(layer_number, layer.name, layer.trainable)
+    
+    st.write(len(get_model_2_layers.trainable_variables))
+    
+    # Fine tune for another 5 epochs
+    initial_epochs = len(initial_history)
+    fine_tune_epochs = initial_epochs + 5
+
+    with st.spinner("Fine-tune the InceptionV3 model"):
+        # Refit the model
+        history_fine_data_aug_2 = get_model_2.fit(train_data,
+                                                  epochs=fine_tune_epochs,
+                                                  validation_data=test_data,
+                                                  initial_epoch=initial_history.epoch[-1],
+                                                  validation_steps=int(0.25 * len(test_data)))
+     # Save the fine-tuned history
+    st.session_state['model_2_history_fine'] = history_fine_data_aug_2
+    
+    # Compare histories
+    st.subheader("Training History Comparison")
+    try:
+        fig = compare_historys(
+            original_history=initial_history,
+            new_history=history_fine_data_aug_2,
+            initial_epochs=initial_epochs
+        )
+        st.pyplot(fig)
+    except Exception as e:
+        st.error(f"Could not plot history comparison: {e}")
 
 elif choice == "VLM (Vision Language Model)":
     st.subheader("Vision Language Model (CLIP) Implementation")
@@ -522,11 +627,11 @@ elif choice == "Performance Evaluation Metrics":
         y_pred_classes = np.argmax(y_pred, axis=1)
 
         # Metrics
-        accuracy = accuracy_score(y_true, y_pred_classes) 
-        precision = precision_score(y_true, y_pred_classes)
-        recall = recall_score(y_true, y_pred_classes)
-        f1 = f1_score(y_true, y_pred_classes)
-        roc_auc_curve = roc_auc_score(y_true, y_pred_classes)
+        accuracy = accuracy_score(y_true, y_pred_classes, average='weighted') 
+        precision = precision_score(y_true, y_pred_classes, average='weighted')
+        recall = recall_score(y_true, y_pred_classes, average='weighted')
+        f1 = f1_score(y_true, y_pred_classes, average='weighted')
+        roc_auc_curve = roc_auc_score(y_true, y_pred_classes, average='weighted')
 
         models_performance['Model'].append(model_name)  
         models_performance['Accuracy'].append(accuracy)
@@ -559,4 +664,3 @@ elif choice == "Performance Evaluation Metrics":
         
     plt.tight_layout()
     st.pyplot(fig) 
-        
