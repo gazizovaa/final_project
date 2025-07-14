@@ -539,7 +539,7 @@ elif choice == "Fine Tuning":
     for layer_number, layer in enumerate(get_model_2_base_model.layers):
         print(layer_number, layer.name, layer.trainable)
     
-    st.write(len(get_model_2_layers.layers))
+    st.write(len(get_model_2_layers))
     
     # Fine tune for another 5 epochs
     initial_epochs = len(initial_history.history['loss'])
