@@ -1,0 +1,219 @@
+§
+    seh&)  ã                   ó¦   — d dl Zdd„Zd dlZd dlmZ d dl Zd dl	m
+Z
+ dd	„Z
+d
+„ Zd dl
+Z
+d
+„ Zd dlmZ d„ Zdd„Zd dlZd„ Zd dlZd„ Zd dl	mZmZ d„ ZdS )é    Néà   Tc                 óÔ   — t           j                             | ¦  «        }t           j                             |¦  «        }t           j                             |||g¦  «        }|r|dz
+  S |S )a7  
+  Reads in an image from filename, turns it into a tensor and reshapes into
+  (224, 224, 3).
+
+  Parameters
+  ----------
+  filename (str): string filename of target image
+  img_shape (int): size to resize target image to, default 224
+  scale (bool): whether to scale pixel values to range(0, 1), default True
+  g     ào@)ÚtfÚioÚ	read_fileÚimageÚ
+decode_jpegÚresize)ÚfilenameÚ	img_shapeÚscaleÚimgs       ú0D:\div_academy_final_project\helper_functions.pyÚload_and_prep_imager       s\   € õ 	
+ŒŠ˜Ñ!Ô!€#å
+Œ×Ò˜SÑ!Ô!€#å
+ŒŠ˜˜i¨Ð3Ñ4Ô4€#Ø
+ð à
+ˆt‰8€Oà
+€Jó    )Úconfusion_matrix©é
+   r   é   Fc            
+      ó¨  — t          | |¦  «        } |                      d¦  «        |                      d¬¦  «        dd…t          j        f         z
+  }| j        d         }	t
+          j         |¬¦  «        \  }
+}
+|
+                     | t          j	        j
+        ¬ ¦  «        }|
+ 
+                    |¦  «         |r|}
+nt           j        | j        d         ¦  «        }
+|
+ 
+                    dd	d
+t           j        |	¦  «        t           j        |	¦  «        |
+|
+¬
+¦   «          |
+j                             d¦  «         |
+j                             ¦   «          |                      ¦   «         |                      ¦   «         z   d
+z
+  }t'          j        t+          | j        d         ¦  «        t+          | j        d         ¦  «        ¦  «        D ]\  }}|rEt
+          j        ||| ||f         › d|||f         dz  d›dd| ||f         |k    rdnd|¬¦  «         ŒLt
+          j        ||| ||f         › d| ||f         |k    rdnd|¬¦  «         Œ€|r|
+                     d¦  «         dS dS )a  Makes a labelled confusion matrix comparing predictions and ground truth labels.
+
+  If classes is passed, confusion matrix will be labelled, if not, integer class values
+  will be used.
+
+  Args:
+    y_true: Array of truth labels (must be same shape as y_pred).
+    y_pred: Array of predicted labels (must be same shape as y_true).
+    classes: Array of class labels (e.g. string form). If `None`, integer labels are used.
+    figsize: Size of output figure (default=(10, 10)).
+    text_size: Size of output figure text (default=15).
+    norm: normalize values or not (default=False).
+    savefig: save confusion matrix to file (default=False).
+  
+  Returns:
+    A labelled confusion matrix plot comparing y_true and y_pred.
+
+  Example usage:
+    make_confusion_matrix(y_true=test_labels, # ground truth test labels
+                          y_pred=y_preds, # predicted labels
+                          classes=class_names, # array of class label names
+                          figsize=(15, 15),
+                          text_size=10)
+  Úfloaté   ©ÚaxisNr   ©Ú figsize)ÚcmapzConfusion MatrixzPredicted labelz
+True label) ÚtitleÚxlabelÚylabelÚxticksÚyticksÚ
+xticklabelsÚ
+yticklabelsÚbottomg       @z (éd   z.1fz%)ÚcenterÚwhiteÚblack)ÚhorizontalalignmentÚcolorÚsizezconfusion_matrix.png)r   ÚastypeÚsumÚnpÚ newaxisÚshapeÚpltÚsubplotsÚ matshowÚcmÚBluesÚcolorbarÚarangeÚsetÚxaxisÚset_label_positionÚ
+tick_bottomÚmaxÚminÚ	itertoolsÚ productÚrangeÚtextÚ savefig)Úy_trueÚy_predÚ classesr   Ú	text_sizeÚnormrC   r5   Ú cm_normÚ	n_classesÚfigÚaxÚcaxÚlabelsÚ	thresholdÚiÚjs                    r   Úmake_confusion_matrixrR   &   sy  € õ4 ˜ Ñ 'Ô '€"ØIŠIgÑÔ §¢¨Q ¡¤°°°µ2´:°
+Ô!>Ñ>€'ØŒhqŒk€)õ 
+ŒL Ð)Ñ)Ô)'€#€rØ
+
+Š
+2CœFœLˆ
+Ñ)Ô)€#Ø‡,‚,ˆsÑÔÐð 
+ð $Ø
+€F€Få
+ŒYr”x ”{Ñ
+#Ô
+#€Fð ‡&‚&Ð!Ø!ØÝ”	˜)Ñ$Ô$Ý”	˜)Ñ$Ô$ØØð
+ 	ñ ô ð ð „(×Ò˜hÑ'Ô'Ð'Ø„(×ÒÑÔÐð vŠv‰xŒx˜"Ÿ&š&™(œ(Ñ" bÑ(€)õ Ô¥ b¤h¨q¤kÑ 2Ô 2µE¸"¼(À1¼+Ñ4FÔ4FÑGÔGð 
+ð 
+d€aˆØ 
+ð 	Ý	„hˆq!˜˜1˜a˜4œÐ=Ð= G¨A¨q¨D¤M°#Ñ$5Ð=Ð=Ð=Ð=Ø"*Ø! ! Q $œx¨)Ò3Ð3GG¸Øð  ñ  ô  ð  ð  õ
+  
+„hˆq!˜˜1˜a˜4œ]Ø"*Ø! ! Q $œx¨)Ò3Ð3GG¸Øð  ñ  ô  ð  ð  ð 
+ð (Ø ‡K‚KÐ&Ñ'Ô'Ð'Ð'Ð'ð(ð (r   c                 óÂ  — t          |¦  «        }|                      t          j        |d¬¦  «        ¦  «        }t	          |d         ¦  «        dk    r||                     ¦   «                  }n3|t
+          t          j         |¦  «        d         d         ¦  «                 }t          j	        |¦  «         t          j
+        d|› ¦  «         t          j
+        d¦  «         dS ) z–
+  Imports an image located at filename, makes a prediction on it with
+  a trained model and plots the image with the predicted class as the title.
+  r   r   r   zPrediction: FN)r   Ú predictr   Ú
+expand_dimsÚlenÚargmaxÚintÚroundr2   Úimshowr   r   )Úmodelr
+   Ú
+class_namesr   ÚpredÚ
+pred_classs         r   Ú
+pred_and_plotr_   q   s»   € õ 	˜HÑ%Ô%€#ð 
+Š•r”~ c°Ð2Ñ2Ô2Ñ	3Ô	3€$õ 	ˆˆaŒ\„\AÒÐØ˜TŸ[š[™]œ]Ô+€J€JàS¥¤¨$¡¤°Ô!2°1Ô!5Ñ6Ô6Ô7€Jõ „*ˆS/„/€/Ý„)Ð'˜:Ð'Ð'Ñ(Ô(Ð(Ý„(ˆ5/„/€/€/€/r   c                 óî   — | dz   |z   dz   t           j                              ¦   «                              d¦  «        z   }t          j        j                             |¬¦  «        }t          d|› ¦  «         |S )a-  
+  Creates a TensorBoard callback instand to store log files.
+
+  Stores log files with the filepath:
+    "dir_name/experiment_name/current_datetime/"
+
+  Args:
+    dir_name: target directory to store TensorBoard log files
+    experiment_name: name of experiment directory (e.g. efficientnet_model_1)
+  ú/z
+%Y%m%d-%H%M%S)Ú log_dirz!Saving TensorBoard log files to: )ÚdatetimeÚnowÚstrftimer   ÚkerasÚ	callbacksÚ
+TensorBoardÚprint)Údir_nameÚexperiment_namerb   Útensorboard_callbacks       r   Úcreate_tensorboard_callbackrm   ‰   s|   € ð 
+s‰N˜_Ñ,¨sÑ2µXÔ5F×5JÒ5JÑ5LÔ5L×5UÒ5UÐVeÑ5fÔ5fÑf€'ÝœÔ+×7Ò7Øð 8ñ ô Ðõ Ð5¨GÐ5Ð5Ñ6Ô6Ð6Ø	Ðr   c                 ó†  — | j         d         }| j         d         }| j         d         }| j         d         }t          t          | j         d         ¦  «        ¦  «        }t           j        ||d¬¦  «         t           j        ||d¬¦  «         t           j        d ¦  «         t           j        d¦  «         t           j         ¦   «          t           j        ¦   «          t           j        ||d	¬¦  «         t           j        ||d¬¦  «         t           j        d
+¦  «         t           j        d¦  «         t           j         ¦   «          d
+S )zÊ
+  Returns separate loss curves for training and validation metrics.
+
+  Args:
+    history: TensorFlow model History object (see: https://www.tensorflow.org/api_docs/python/tf/keras/callbacks/History)
+  ÚlossÚval_lossÚaccuracyÚval_accuracyÚ
+training_loss©ÚlabelÚLossÚEpochsÚtraining_accuracyÚAccuracyN)	Ú historyrA   rV   r2   Úplotr   r   ÚlegendÚfigure)rz   ro   rp   rq   rr   Úepochss         r   Úplot_loss_curvesr   ž   s  € ð 
+Œ˜Ô	 €$Ø
+Œ_˜ZÔ
+(€(à
+Œ_˜ZÔ
+(€(Ø” Ô0€,å
+•W”_ VÔ,Ñ-Ô-Ñ
+.Ô
+.€&õ „(ˆ64˜Ð/Ñ/Ô/Ð/Ý„(ˆ68 :Ð.Ñ.Ô.Ð.Ý„)ˆFÑÔÐÝ„*ˆXÑÔÐÝ„*,„,€,õ „*,„,€,Ý„(ˆ68Ð#6Ð7Ñ7Ô7Ð7Ý„(ˆ6< ~Ð6Ñ6Ô6Ð6Ý„)ˆJÑÔÐÝ„*ˆXÑÔÐÝ„*,„,€,€,€,r   é   c                 óÒ  — | j         d         }| j         d         }| j         d         }| j         d         }||j         d         z   } ||j         d         z   }||j         d         z   }	||j         d         z   }
+t          j        d¬¦  «         t          j        d dd¦  «         t          j        | d	¬
+¦  «         t          j        |	d
+¬
+¦  «         t          j        |dz
+  |dz
+  gt          j        ¦   «         d¬
+¦  «         t          j        d
+¬¦  «         t          j         d¦  «         t          j        d dd ¦  «         t          j        |d¬
+¦  «         t          j        |
+d¬
+¦  «         t          j        |dz
+  |dz
+  gt          j        ¦   «         d¬
+¦  «         t          j        d¬¦  «         t          j         d¦  «         t          j        d¦  «         t          j	        ¦   «          dS )aP  
+    Compares two TensorFlow model History objects.
+    
+    Args:
+      original_history: History object from original model (before new_history)
+      new_history: History object from continued model training (after original_history)
+      initial_epochs: Number of epochs in original_history (new_history plot starts from here) 
+    rq   ro   rr   rp   )é   r‚   r   é   r   zTraining Accuracyrt   zValidation AccuracyzStart Fine Tuningz
+lower right)Úlocz Training and Validation Accuracyz
+Training LosszValidation Lossz
+upper rightzTraining and Validation LossÚepochN)
+rz   r2   r}   Ú subplotr{   Úylimr|   r   r   Úshow)
+Úoriginal_historyÚ
+new_historyÚinitial_epochsÚaccro   Ú val_accrp   Ú	total_accÚ
+total_lossÚ
+total_val_accÚtotal_val_losss
+              r   Úcompare_historysr’   ¼   sé  € ð 
+Ô
+" :Ô
+.€CØ
+Ô
+# FÔ
++€DàÔ& ~Ô6€GØÔ'¨
+Ô3€Hð kÔ)¨*Ô5Ñ5€IØ˜
+Ô+¨FÔ3Ñ3€Jà˜kÔ1°.ÔAÑA€MØ 
+Ô 3°JÔ ?Ñ?€Nõ „JvÐÑÔÐÝ „K1aÑÔÐÝ „HˆYÐ1Ð2Ñ2Ô2Ð2Ý „Hˆ]Ð"7Ð8Ñ8Ô8Ð8Ý „Hˆn˜QÑ ¨qÑ 0Ð
+1ÝŒh‰jŒjÐ 3ð5ñ 5ô 5ð 5å „J=Ð!Ñ!Ô!Ð!Ý „IÐ0Ñ1Ô1Ð1å „K1aÑÔÐÝ „HˆZ˜Ð/Ñ/Ô/Ð/Ý „Hˆ^Ð#4Ð5Ñ5Ô5Ð5Ý „Hˆn˜QÑ ¨qÑ 0Ð
+1ÝŒh‰jŒjÐ 3ð5ñ 5ô 5ð 5å „J=Ð!Ñ!Ô!Ð!Ý „IÐ,Ñ-Ô-Ð-Ý „JˆwÑÔÐÝ „HJ„J€J€J€Jr   c                 ó€   — t          j        | d¦  «        }|                     ¦   «          |                     ¦   «          dS )zˆ
+  Unzips filename into the current working directory.
+
+  Args:
+    filename (str): a filepath to a target zip folder to be unzipped.
+  ÚrN)Ú zipfileÚ ZipFileÚ
+extractallÚclose)r
+   Ú zip_refs     r   Ú
+unzip_datarš   ì   s8   € õ 
+ŒO˜H cÑ*Ô*€'Ø	×ÒÑÔÐØ	‡-‚-/„/€/€/€/r   c           
+      ó¢   — t          j        | ¦  «        D ]9\  }}}t          dt           |¦  «        › dt           |¦  «        › d|› d ¦  «         Œ:dS )a  
+  Walks through dir_path returning its contents.
+
+  Args:
+    dir_path (str): target directory
+  
+  Returns:
+    A print out of:
+      number of subdiretories in dir_path
+      number of images (files) in each subdirectory
+      name of each subdirectory
+  z
+There are z directories and z images in 'z'.N)ÚosÚwalkri   rV   )Údir_pathÚ dirpathÚdirnamesÚ	filenamess       r   Úwalk_through_dirr¢   û   sl   € õ ')¤g¨hÑ&7Ô&7ð `ð `Ñ"€gˆx˜Ý	Ð
+^•s˜8‘}”}Ð
+^Ð
+^µs¸9±~´~Ð
+^Ð
+^ÐSZÐ
+^Ð
+^Ð
+^Ñ_Ô_Ð_Ð_ð`ð `r   ©Úaccuracy_scoreÚprecision_recall_fscore_supportc                 óh   — t          | |¦  «        dz  }t          | |d¬¦  «        \  }}}}||||dœ} | S )a  
+  Calculates model accuracy, precision, recall and f1 score of a binary classification model.
+
+  Args:
+      y_true: true labels in the form of a 1D array
+      y_pred: predicted labels in the form of a 1D array
+
+  Returns a dictionary of accuracy, precision, recall, f1-score.
+  r&   Úweighted)Ú average)rq   Ú	precisionÚrecallÚf1r£   )rD   rE   Úmodel_accuracyÚmodel_precisionÚmodel_recallÚmodel_f1Ú_Ú
+model_resultss           r   Úcalculate_resultsr²     sW   € õ " &¨&Ñ1Ô1°CÑ7€.å/NÈvÐW]ÐgqÐ/rÑ/rÔ/rÑ,€/< ¨1Ø-Ø.Ø(Ø ð "ð "€-ð 
+Ðr   )r   T)Nr   r   FF)r€   )Ú
+tensorflowr   r   r?   Úmatplotlib.pyplotÚpyplotr2   Únumpyr/   Úsklearn.metricsr   rR   r_   rc   rm   r   r’   r•   rš   rœ   r¢   r¤   r¥   r²   © r   r   ú<module>r¹      sJ  ðð Ð Ð Ð ðð ð ð ð2 Ð Ð Ð Ø Ð Ð Ð Ð Ð Ø Ð Ð Ð Ø ,Ð ,Ð ,Ð ,Ð ,Ð ,ðH(ð H(ð H(ð H(ðVð ð ð, €€€ðð ð ð&  Ð Ð Ð Ð Ð ðð ð ð<*ð *ð *ð *ð\ €€€ð	ð 	ð 	ð 
+€	€	€	ð`ð `ð `ð" LÐ KÐ KÐ KÐ KÐ KÐ KÐ Kðð ð ð ð r   
