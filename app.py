@@ -17,6 +17,7 @@ from transformers import CLIPProcessor, CLIPModel
 import pickle
 import shutil
 
+
 # Page Configuration
 st.set_page_config(
     page_title="Final Project App",
@@ -721,93 +722,98 @@ elif choice == "VLM (Vision Language Model)":
         except Exception as e:
             st.error(f"Error loading CLIP model: {e}")
             return None, None
-        
-    # Load models 
+
+    # Load models
     clip_model, clip_processor = load_clip_model()
-    
+
     if clip_model is None:
         st.error("Failed to load CLIP model. Please install transformers library.")
         st.code("pip install transformers torch")
         st.stop()
-    
+
     st.success("CLIP model loaded successfully!")
 
-    # Create tabs 
+    # Create tabs
     tab1, tab2, tab3 = st.tabs(["Image Analysis", "Text Search", "Batch Analysis"])
-    
+
     with tab1:
         st.subheader("Image-Text Matching")
-        
-        # Upload image 
+
+        # Upload image
         uploaded_file = st.file_uploader(
             type=['jpg', 'jpeg', 'png'],
             key="vlm_image"
         )
-        
+
         if uploaded_file is not None:
             image = Image.open(uploaded_file)
             st.image(image, caption="Uploaded image", use_column_width=True)
-            
+
             # Text prompts
             st.subheader("Text Prompts")
-            
+
             # Predefined prompts
-            drug_classes = ['Alaxan', 'Bactidol', 'Bioflu', 'Biogesic', 'DayZinc', 
-                            'Decolgen', 'Fish Oil', 'Kremil S', 'Medicol', 'Neozep']
-            
+            drug_classes = [
+                'Alaxan', 'Bactidol', 'Bioflu', 'Biogesic', 'DayZinc',
+                'Decolgen', 'Fish Oil', 'Kremil S', 'Medicol', 'Neozep'
+            ]
+
             col1, col2 = st.columns(2)
-            
+
             with col1:
                 st.write("**Auto Prompts:**")
                 auto_prompts = [f"a photo of {drug} medication" for drug in drug_classes]
-                
+
                 if st.button("Auto Analysis"):
                     with st.spinner("Analyzing..."):
                         try:
-                            # Process with CLIP 
+                            # Process with CLIP
                             inputs = clip_processor(
-                                text=auto_prompts, 
-                                images=image, 
-                                return_tensors="pt", 
+                                text=auto_prompts,
+                                images=image,
+                                return_tensors="pt",
                                 padding=True
                             )
-                            
+
                             with torch.no_grad():
                                 outputs = clip_model(**inputs)
                                 logits_per_image = outputs.logits_per_image
                                 probs = logits_per_image.softmax(dim=1)
-                            
+
                             # Show results
                             results_df = pd.DataFrame({
                                 'Drug': drug_classes,
                                 'Probability': [float(prob) for prob in probs[0]],
                                 'Probability (%)': [f"{float(prob)*100:.1f}%" for prob in probs[0]]
                             })
-                            
+
                             results_df = results_df.sort_values('Probability', ascending=False)
-                            
+
                             # Highlight highest probability
-                            st.success(f"Highest probability: **{results_df.iloc[0]['Drug']}** ({results_df.iloc[0]['Probability (%)']}) ")
-                            
-                            # Show table 
+                            st.success(
+                                f"Highest probability: **{results_df.iloc[0]['Drug']}** "
+                                f"({results_df.iloc[0]['Probability (%)']})"
+                            )
+
+                            # Show table
                             st.dataframe(results_df, use_container_width=True)
-                            
+
                             fig, ax = plt.subplots(figsize=(10, 6))
                             bars = ax.bar(results_df['Drug'], results_df['Probability'])
                             ax.set_title('CLIP Model Probabilities')
                             ax.set_ylabel('Probability')
                             ax.set_xlabel('Drug Classes')
                             plt.xticks(rotation=45)
-                            
+
                             # Color highest probability
                             bars[0].set_color('red')
-                            
+
                             plt.tight_layout()
                             st.pyplot(fig)
-                            
+
                         except Exception as e:
                             st.error(f"Analysis error: {e}")
-            
+
             with col2:
                 st.write("**Custom Prompt:**")
                 custom_prompt = st.text_input(
@@ -815,51 +821,49 @@ elif choice == "VLM (Vision Language Model)":
                     value="a photo of medicine",
                     help="Example: 'a photo of pain relief medication'"
                 )
-                
+
                 if st.button("🔍 Custom Prompt Analysis"):
                     if custom_prompt:
                         with st.spinner("Analyzing..."):
                             try:
                                 # Analyze with custom prompt
                                 inputs = clip_processor(
-                                    text=[custom_prompt], 
-                                    images=image, 
-                                    return_tensors="pt", 
+                                    text=[custom_prompt],
+                                    images=image,
+                                    return_tensors="pt",
                                     padding=True
                                 )
-                                
+
                                 with torch.no_grad():
                                     outputs = clip_model(**inputs)
                                     logits_per_image = outputs.logits_per_image
                                     similarity = logits_per_image[0][0].item()
-                                
-                                # Show result
+
                                 similarity_percent = (similarity + 1) / 2 * 100  # [-1,1] → [0,100]
-                                
+
                                 st.metric(
                                     label="Similarity Score",
                                     value=f"{similarity_percent:.1f}%",
                                     delta=f"Raw score: {similarity:.3f}"
                                 )
-                                
-                                # Visual representation
-                                progress_bar = st.progress(similarity_percent / 100)
-                                
+
+                                st.progress(similarity_percent / 100)
+
                                 if similarity_percent > 70:
                                     st.success("🎯 High similarity!")
                                 elif similarity_percent > 40:
                                     st.info("⚠️ Medium similarity")
                                 else:
                                     st.warning("❌ Low similarity")
-                                    
+
                             except Exception as e:
                                 st.error(f"Analysis error: {e}")
                     else:
                         st.warning("Please enter a prompt!")
-    
+
     with tab2:
         st.subheader("Text-Based Image Search")
-        
+
         # Load dataset images
         if os.path.exists("data/Drug Vision/Data Combined"):
             search_query = st.text_input(
@@ -867,21 +871,20 @@ elif choice == "VLM (Vision Language Model)":
                 value="pain relief medication",
                 help="Enter the type of drug you're looking for"
             )
-            
+
             num_results = st.slider("Number of results:", 1, 10, 5)
-            
+
             if st.button("🔍 Search"):
                 with st.spinner("Searching..."):
                     try:
-                        # Load all images
                         all_images = []
                         all_paths = []
-                        
+
                         data_dir = "data/Drug Vision/Data Combined"
                         for class_name in os.listdir(data_dir):
                             class_path = os.path.join(data_dir, class_name)
                             if os.path.isdir(class_path):
-                                for img_file in os.listdir(class_path)[:5]:  # 5 images per class
+                                for img_file in os.listdir(class_path)[:5]:
                                     if img_file.lower().endswith(('.jpg', '.jpeg', '.png')):
                                         img_path = os.path.join(class_path, img_file)
                                         try:
@@ -890,26 +893,24 @@ elif choice == "VLM (Vision Language Model)":
                                             all_paths.append(img_path)
                                         except:
                                             continue
-                        
+
                         if all_images:
-                            # Search with CLIP
                             inputs = clip_processor(
-                                text=[search_query], 
-                                images=all_images, 
-                                return_tensors="pt", 
-                                padding=True)
-                            
+                                text=[search_query],
+                                images=all_images,
+                                return_tensors="pt",
+                                padding=True
+                            )
+
                             with torch.no_grad():
                                 outputs = clip_model(**inputs)
                                 logits_per_image = outputs.logits_per_image
                                 similarities = logits_per_image[0].cpu().numpy()
-                            
-                            # Find top matches
+
                             top_indices = np.argsort(similarities)[::-1][:num_results]
-    
-                            # Display results
+
                             st.subheader(f"Top {num_results} results for '{search_query}':")
-    
+
                             cols = st.columns(min(3, num_results))
                             for i, idx in enumerate(top_indices):
                                 with cols[i % 3]:
@@ -917,104 +918,128 @@ elif choice == "VLM (Vision Language Model)":
                                     similarity_score = (similarities[idx] + 1) / 2 * 100
                                     st.write(f"**Similarity: {similarity_score:.1f}%**")
                                     st.write(f"Path: {os.path.basename(all_paths[idx])}")
-                            else:
-                                st.error("No images found!")
-        
+
+                        else:
+                            st.error("No images found!")
+
                     except Exception as e:
                         st.error(f"Search error: {e}")
-else:
-    st.warning("Dataset not found!")
+        else:
+            st.warning("Dataset not found!")
 
-with tab3:
-    st.subheader("Batch Analysis")
-    
-    # Upload multiple images
-    uploaded_files = st.file_uploader(
-        "Upload multiple images:",
-        type=['jpg', 'jpeg', 'png'],
-        accept_multiple_files=True,
-        key="vlm_batch"
-    )
-    
-    if uploaded_files:
-        st.write(f"Number of uploaded images: {len(uploaded_files)}")
-        
-        # Batch analysis prompt
-        batch_prompt = st.text_input(
-            "Batch analysis prompt:",
-            value="a photo of pharmaceutical drug",
-            help="Prompt to use for all images"
+    with tab3:
+        st.subheader("Batch Analysis")
+
+        uploaded_files = st.file_uploader(
+            "Upload multiple images:",
+            type=['jpg', 'jpeg', 'png'],
+            accept_multiple_files=True,
+            key="vlm_batch"
         )
-        
-        if st.button("🔍 Batch Analysis"):
-            with st.spinner("Analyzing batch..."):
-                try:
-                    images = []
-                    image_names = []
-                    
-                    # Load images
-                    for uploaded_file in uploaded_files:
-                        image = Image.open(uploaded_file)
-                        images.append(image)
-                        image_names.append(uploaded_file.name)
-                    
-                    # Process with CLIP
-                    inputs = clip_processor(
-                        text=[batch_prompt] * len(images), 
-                        images=images, 
-                        return_tensors="pt", 
-                        padding=True
-                    )
-                    
-                    with torch.no_grad():
-                        outputs = clip_model(**inputs)
-                        similarities = outputs.logits_per_image.diagonal().cpu().numpy()
-                    
-                    # Prepare results
-                    results_df = pd.DataFrame({
-                        'Image': image_names,
-                        'Similarity': similarities,
-                        'Similarity (%)': [(sim + 1) / 2 * 100 for sim in similarities]
-                    })
-                    
-                    results_df = results_df.sort_values('Similarity', ascending=False)
-                    
-                    # Show results
-                    st.subheader("📊 Batch Analysis Results")
-                    st.dataframe(results_df, use_container_width=True)
-                    
-                    # Visualization
-                    fig, ax = plt.subplots(figsize=(12, 6))
-                    bars = ax.bar(range(len(results_df)), results_df['Similarity (%)'])
-                    ax.set_title('Batch Analysis Results')
-                    ax.set_ylabel('Similarity (%)')
-                    ax.set_xlabel('Images')
-                    ax.set_xticks(range(len(results_df)))
-                    ax.set_xticklabels(results_df['Image'], rotation=45, ha='right')
-                    
-                    # Highlight top result
-                    bars[0].set_color('green')
-                    
-                    plt.tight_layout()
-                    st.pyplot(fig)
-                    
-                    # CSV export
-                    csv = results_df.to_csv(index=False)
-                    st.download_button(
-                        label="📥 Download as CSV",
-                        data=csv,
-                        file_name="batch_analysis_results.csv",
-                        mime="text/csv"
-                    )
-                    
-                except Exception as e:
-                    st.error(f"Batch analysis error: {e}")
-    else:
-        st.info("Please upload images for batch analysis!")
+
+        if uploaded_files:
+            st.write(f"Number of uploaded images: {len(uploaded_files)}")
+
+            batch_prompt = st.text_input(
+                "Batch analysis prompt:",
+                value="a photo of pharmaceutical drug",
+                help="Prompt to use for all images"
+            )
+
+            if st.button("🔍 Batch Analysis"):
+                with st.spinner("Analyzing batch..."):
+                    try:
+                        images = []
+                        image_names = []
+
+                        for uploaded_file in uploaded_files:
+                            image = Image.open(uploaded_file)
+                            images.append(image)
+                            image_names.append(uploaded_file.name)
+
+                        inputs = clip_processor(
+                            text=[batch_prompt] * len(images),
+                            images=images,
+                            return_tensors="pt",
+                            padding=True
+                        )
+
+                        with torch.no_grad():
+                            outputs = clip_model(**inputs)
+                            similarities = outputs.logits_per_image.diagonal().cpu().numpy()
+
+                        results_df = pd.DataFrame({
+                            'Image': image_names,
+                            'Similarity': similarities,
+                            'Similarity (%)': [(sim + 1) / 2 * 100 for sim in similarities]
+                        })
+
+                        results_df = results_df.sort_values('Similarity', ascending=False)
+
+                        st.subheader("📊 Batch Analysis Results")
+                        st.dataframe(results_df, use_container_width=True)
+
+                        fig, ax = plt.subplots(figsize=(12, 6))
+                        bars = ax.bar(range(len(results_df)), results_df['Similarity (%)'])
+                        ax.set_title('Batch Analysis Results')
+                        ax.set_ylabel('Similarity (%)')
+                        ax.set_xlabel('Images')
+                        ax.set_xticks(range(len(results_df)))
+                        ax.set_xticklabels(results_df['Image'], rotation=45, ha='right')
+
+                        bars[0].set_color('green')
+
+                        plt.tight_layout()
+                        st.pyplot(fig)
+
+                        csv = results_df.to_csv(index=False)
+                        st.download_button(
+                            label="📥 Download as CSV",
+                            data=csv,
+                            file_name="batch_analysis_results.csv",
+                            mime="text/csv"
+                        )
+
+                    except Exception as e:
+                        st.error(f"Batch analysis error: {e}")
+        else:
+            st.info("Please upload images for batch analysis!")
 
 elif choice == "Drugs and Vitamins Detection":
-        st.subheader("Drugs and Vitamins Detection")
-        st.write("Upload an image to classify:")
+    st.subheader("Drugs and Vitamins Detection")
+    st.write("Upload an image to classify:")
+
+    uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
+
+    if uploaded_file is not None:
+        image = Image.open(uploaded_file)
+        st.image(image, caption="Uploaded Image", use_container_width=True)
+
+        if st.session_state.training_complete and st.session_state.models:
+            img_array = tf.keras.utils.img_to_array(image.resize((224, 224)))
+            img_array = tf.expand_dims(img_array, 0) / 255.0
+
+            st.write("Predictions from different models:")
+
+            if train_data is not None:
+                class_names = list(train_data.class_indices.keys())
+
+                for model_name, model in st.session_state.models.items():
+                    try:
+                        predictions = model.predict(img_array)
+                        predicted_class = class_names[np.argmax(predictions[0])]
+                        confidence = np.max(predictions[0])
+
+                        st.write(f"**{model_name}:** {predicted_class} (Confidence: {confidence:.2%})")
+                    except Exception as e:
+                        st.error(f"Error with {model_name}: {e}")
+        else:
+            st.warning("Please train the models first.")
+
+
+elif choice == "Drugs and Vitamins Detection":
+    st.subheader("Drugs and Vitamins Detection")
+    st.write("Upload an image to classify:")
     
     uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
     
@@ -1052,7 +1077,6 @@ elif choice == "Performance Evaluation Metrics":
         st.warning("First, train the models.")
         st.stop()
 
-    # Create a dictionary for metrics metadata
     models_performance = {
         'Model': [],
         'Accuracy': [],
@@ -1060,43 +1084,46 @@ elif choice == "Performance Evaluation Metrics":
         'Recall': [],
         'F1 Score': [],
         'ROC-AUC Curve': []
-        }
+    }
 
-    y_true = test_data.classes 
+    y_true = test_data.classes
 
     for i, (model_name, model) in enumerate(st.session_state.models.items()):
-        st.write(f"Calculate: {model_name}")
+        st.write(f"Calculating: {model_name}")
         y_pred = model.predict(test_data, verbose=0)
         y_pred_classes = np.argmax(y_pred, axis=1)
 
-        # Metrics
-        accuracy = accuracy_score(y_true, y_pred_classes) 
+        accuracy = accuracy_score(y_true, y_pred_classes)
         precision = precision_score(y_true, y_pred_classes, average='weighted')
         recall = recall_score(y_true, y_pred_classes, average='weighted')
         f1 = f1_score(y_true, y_pred_classes, average='weighted')
 
-        # We use one-vs-rest for ROC-AUC since it is a multiclass problem
         try:
-            roc_auc_curve = roc_auc_score(y_true, y_pred_classes, average='weighted')
+            roc_auc_curve = roc_auc_score(
+                y_true,
+                y_pred,  # ehtimal vektoru!
+                multi_class='ovr',
+                average='weighted'
+            )
         except Exception as e:
-            roc_auc_curve = 0.0 
+            roc_auc_curve = 0.0
 
-        models_performance['Model'].append(model_name)  
+        models_performance['Model'].append(model_name)
         models_performance['Accuracy'].append(accuracy)
         models_performance['Precision'].append(precision)
         models_performance['Recall'].append(recall)
         models_performance['F1 Score'].append(f1)
-        models_performance['ROC-AUC Curve'].append(roc_auc_curve) 
-    
-    # Create dataframe to save metrics information
+        models_performance['ROC-AUC Curve'].append(roc_auc_curve)
+
     df_perf_metrics = pd.DataFrame(models_performance)
 
-    # Show the dataframe as a table
     st.dataframe(df_perf_metrics.style.format(precision=2))
 
-    # Create a selectbox
-    metrics_choice = st.selectbox("Select a metric:",
-                                  ['Accuracy', 'Precision', 'Recall', 'F1 Score', 'ROC-AUC Curve'])
+    metrics_choice = st.selectbox(
+        "Select a metric:",
+        ['Accuracy', 'Precision', 'Recall', 'F1 Score', 'ROC-AUC Curve']
+    )
+
     fig, ax = plt.subplots(figsize=(10, 6))
     bars = ax.bar(df_perf_metrics['Model'], df_perf_metrics[metrics_choice], color='skyblue')
     ax.set_title(f"{metrics_choice} Comparison Across Models")
@@ -1105,10 +1132,10 @@ elif choice == "Performance Evaluation Metrics":
     for bar in bars:
         height = bar.get_height()
         ax.annotate(f'{height:.2f}',
-                    xy = (bar.get_x() + bar.get_width() / 2, height),
-                    xytext = (0, 3),
-                    textcoords = "offset points",
-                    ha = "center", va = "bottom")
-        
+                    xy=(bar.get_x() + bar.get_width() / 2, height),
+                    xytext=(0, 3),
+                    textcoords="offset points",
+                    ha="center", va="bottom")
+
     plt.tight_layout()
     st.pyplot(fig)
