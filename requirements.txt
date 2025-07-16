@@ -234,7 +234,7 @@ rq==1.16.2
 rsa==4.7.2
 rstr==3.2.2
 rules==3.4
-s3transfer==0.11.4
+s3transfer==0.10.0
 safetensors==0.5.3
 scikit-learn==1.6.1
 scipy==1.12.0
