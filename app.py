@@ -121,53 +121,48 @@ def create_train_and_test_directories():
     test_dir = 'test'
 
     # Delete the existing folders beforehand
-    if os.path.exists(train_dir):
-        shutil.rmtree(train_dir) 
-    if os.path.exists(test_dir):
-        shutil.rmtree(test_dir)
+    shutil.rmtree(train_dir, ignore_errors=True) 
+    shutil.rmtree(test_dir, ignore_errors=True)
 
     # Create new directories
     os.makedirs(train_dir, exist_ok=True)
     os.makedirs(test_dir, exist_ok=True) 
 
     dir_path = "data/Drug Vision/Data Combined"
+    if not os.path.exists(dir_path):
+        st.error("Dataset path is not found!")
+        return 
+    
+    # Create a progress bar
+    progress_bar = st.progress(0)
+    total_files = len(train_data.filenames) + len(test_data.filenames)
+    processed = 0 
 
     # Copy files to train directory
-    progress_text = "Copying train images. Please wait..."
-    train_dir_progress = st.progress(0, text=progress_text)
     for i, file in enumerate(train_data.filenames):
-        parts = file.split('/')
+        parts = file.replace('\\', '/').split('/')
         if len(parts) >= 2:
-            class_name = parts[0]
-            file_name = parts[1]
+            class_name, file_name = parts[-2], parts[-1] 
             src = os.path.join(dir_path, class_name, file_name)
             train_target_dir = os.path.join(train_dir, class_name)
             os.makedirs(train_target_dir, exist_ok=True)
-            train_folder = os.path.join(train_target_dir, file_name)
+            shutil.copy2(src, os.path.join(train_target_dir, file_name))
 
-            if os.path.exists(src) and not os.path.exists(train_folder):
-                shutil.copy2(src, train_folder)
+        processed += 1 
+        progress_bar.progress(processed / total_files)
 
-        update_progress = (i + 1) / len(train_data.filenames)
-        train_dir_progress.progress(update_progress)
-
-    progress_text2 = "Copying test images. Please wait..."
-    test_dir_progress = st.progress(0, text=progress_text2)
+    # Copy files to test directory
     for i, file in enumerate(test_data.filenames):
-        parts = file.split('/')
+        parts = file.replace('\\', '/').split('/')
         if len(parts) >= 2:
-            class_name = parts[0]
-            file_name = parts[1]
+            class_name, file_name = parts[-2], parts[-1]  
             src = os.path.join(dir_path, class_name, file_name)
             test_target_dir = os.path.join(test_dir, class_name)
             os.makedirs(test_target_dir, exist_ok=True)
-            test_folder = os.path.join(test_target_dir, file_name) 
-
-            if os.path.exists(src) and not os.path.exists(test_folder):
-                shutil.copy2(src, test_folder)
+            shutil.copy2(src, os.path.join(test_target_dir, file_name)) 
         
-        update_progress2 = (i + 1) / len(test_data.filenames)
-        test_dir_progress.progress(update_progress2) 
+        processed += 1 
+        progress_bar.progress(processed / total_files) 
 
 # Model creation function
 def get_or_create_models():
@@ -303,52 +298,30 @@ if choice == "Dataset Overview":
 
 elif choice == "Fitting the Model":
     st.subheader("Fitting the Model")
+    
+    # Add GPU checking
+    if tf.config.list_physical_devices('GPU'):
+        st.success("GPU is available!")
+    else:
+        st.warning("No GPU found!")
+        
     models = get_or_create_models()
+    # Create separate tabs for models
+    model_tabs = st.tabs([f"Model {i + 1}" for i in range(len(models))])
     
     if st.button("Train all models"):
         with st.spinner("Training Models..."):
-            # Create directories
-            os.makedirs('train', exist_ok=True)
-            os.makedirs('test', exist_ok=True)
-            os.makedirs('checkpoints', exist_ok=True)
+            # Add progress bar
+            progress_bar = st.progress(0) 
+            status_text = st.empty()
             
-            # Copy files to train/test directories
-            dir_path = "data/Drug Vision/Data Combined"
-            train_dir = 'train'
-            test_dir = 'test'
-            
-            # Copy training files
-            for file in train_data.filenames:
-                parts = file.split('/')
-                if len(parts) == 2:
-                    class_name, file_name = parts 
-                    src = os.path.join(dir_path, class_name, file_name)
-                    train_target_dir = os.path.join(train_dir, class_name)
-                    os.makedirs(train_target_dir, exist_ok=True)
-                    train_dest = os.path.join(train_target_dir, file_name)
-                    if os.path.exists(src) and not os.path.exists(train_dest):
-                        shutil.copy2(src, train_dest)
-
-            # Copy test files
-            for file in test_data.filenames:
-                parts = file.split('/')
-                if len(parts) == 2:
-                    class_name, file_name = parts
-                    src = os.path.join(dir_path, class_name, file_name)
-                    test_target_dir = os.path.join(test_dir, class_name)
-                    os.makedirs(test_target_dir, exist_ok=True)
-                    test_dest = os.path.join(test_target_dir, file_name)
-                    if os.path.exists(src) and not os.path.exists(test_dest):
-                        shutil.copy2(src, test_dest)
-            
-            # Train models
-            for model_name, model in models.items():
-                st.write(f"Training {model_name}...")
+            for i, (model_name, model) in enumerate(models.items()):
+                status_text.text(f"Training {model_name}...")
                 
-                # Compile model
+                # Compile models
                 model.compile(loss='categorical_crossentropy',
-                            optimizer=tf.keras.optimizers.Adam(learning_rate=1e-4),
-                            metrics=['accuracy'])
+                              optimizer=tf.keras.optimizers.Adam(learning_rate=1e-4),
+                              metrics=['accuracy'])
                 
                 # Callbacks
                 checkpoint_path = f'checkpoints/{model_name}_checkpoint.weights.h5'
@@ -374,7 +347,8 @@ elif choice == "Fitting the Model":
                     steps_per_epoch=len(train_data),
                     validation_data=test_data,
                     validation_steps=len(test_data),
-                    callbacks=[model_ckp, model_es]
+                    callbacks=[model_ckp, model_es],
+                    verbose=0
                 )
                 
                 # Save model and history
@@ -383,36 +357,51 @@ elif choice == "Fitting the Model":
                 
                 # Store in session state
                 st.session_state[f"{model_name}_history"] = history
+                save_model(model, model_name) 
+                save_training_history(history, model_name) 
+                
+                progress_bar.progress((i + 1) / len(models))
             
             st.session_state.training_complete = True
             st.success("All models trained successfully!")
+            st.balloons() 
     
-    # Display model summary for model_1
-    if 'model_1' in models:
-        model_1 = models['model_1']
-        
-        # Model summary
-        stream = io.StringIO()
-        model_1.summary(print_fn=lambda x: stream.write(x + '\n'))
-        summary_string = stream.getvalue()
-        stream.close()
-        st.text(summary_string)
-        
-        # Model layers table
-        layers = [(layer.name, str(layer.output.shape), layer.count_params()) for layer in model_1.layers]
-        df_layers = pd.DataFrame(layers, columns=["Layer name", "Output shape", "Param #"])
-        st.table(df_layers)
-        
-        # Evaluate model if trained
-        if st.session_state.training_complete:
-            loss, accuracy = model_1.evaluate(test_data, verbose=0)
-            st.write(f"Test Loss: {loss:.4f}")
-            st.write(f"Test Accuracy: {accuracy:.4f}")
+    # Display all model summary info
+    for (model_name, model), tab in zip(models.items(), model_tabs):
+        with tab:
+            # Model summary info 
+            with st.expander("Model Architecture"):
+                stream = io.StringIO()
+                model.summary(print_fn=lambda x: stream.write(x + '\n'))
+                st.text(stream.getvalue())
+                
+                # Layer table
+                layers = [(layer.name, str(layer.output.shape), layer.count_params()) 
+                         for layer in model.layers]
+                st.table(pd.DataFrame(layers, 
+                          columns=["Layer", "Output Shape", "Parameters"]))
             
-            # Plot training history
-            if 'model_1_history' in st.session_state:
-                fig = plot_loss_curves(st.session_state['model_1_history'])
+            # Training results
+            if st.session_state.training_complete and f"{model_name}_history" in st.session_state:
+                history = st.session_state[f"{model_name}_history"]
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.metric("Training Accuracy", f"{history.history['accuracy'][-1]:.2%}")
+                    st.metric("Training Loss", f"{history.history['loss'][-1]:.4f}")
+                with col2:
+                    st.metric("Validation Accuracy", f"{history.history['val_accuracy'][-1]:.2%}")
+                    st.metric("Validation Loss", f"{history.history['val_loss'][-1]:.4f}")
+                
+                fig = plot_loss_curves(history)
                 st.pyplot(fig)
+                
+                # Test results
+                if st.button(f"Evaluate {model_name}"):
+                    loss, accuracy = model.evaluate(test_data, verbose=0)
+                    st.success(f"{model_name} Test Accuracy: {accuracy:.2%}")
+            else:
+                st.warning("Model is not trained yet!")
 
 elif choice == "Preprocessing":
     st.subheader("Preprocessing")
