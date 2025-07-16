@@ -290,7 +290,7 @@ user-agents==2.2.0
 utils==1.0.2
 watchdog==6.0.0
 wcwidth==0.2.13
-webcolors==1.13
+webcolors==24.6.0
 webencodings==0.5.1
 websocket-client==1.7.0
 websockets==10.4
