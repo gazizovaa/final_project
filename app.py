@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import streamlit as st 
 import tensorflow as tf
+from tensorflow.python.keras.utils.data_utils import Sequence
 import random 
 import io 
 import cv2 
@@ -232,10 +233,26 @@ def get_or_create_models():
 # Main app
 st.title("Pharmaceutical Drugs and Vitamins Synthetic Images App")
 
+class CustomDataGenerator(Sequence):
+    def __init__(self, dataset, batch_size=32, **kwargs):
+        self.dataset = dataset
+        self.batch_size = batch_size
+        super().__init__(**kwargs) 
+        
+    def __len__(self):
+        return len(self.dataset)
+        
+    def __getitem__(self, idx):
+        return self.dataset[idx]
+    
 # Initialize data loading
 @st.cache_resource 
 def load_data():
     dir_path = "data/Drug Vision/Data Combined"
+    if not os.path.exists(dir_path):
+        st.error("Dataset path not found!")
+        return None, None 
+    
     IMG_SIZE = (224, 224)
     BATCH_SIZE = 32
     
@@ -254,7 +271,7 @@ def load_data():
                                                     batch_size=BATCH_SIZE,
                                                     class_mode='categorical',
                                                     subset='validation')
-    return train_data, test_data
+    return CustomDataGenerator(train_data), CustomDataGenerator(test_data) 
 
 # Load data
 train_data, test_data = load_data()
