@@ -128,10 +128,7 @@ def create_train_and_test_directories():
     os.makedirs(train_dir, exist_ok=True)
     os.makedirs(test_dir, exist_ok=True) 
 
-    dir_path = "data/Drug Vision/Data Combined"
-    if not os.path.exists(dir_path):
-        st.error("Dataset path is not found!")
-        return 
+    dir_path = "data/Drug Vision/Data Combined" 
     
     # Create a progress bar
     progress_bar = st.progress(0)
