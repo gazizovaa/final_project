@@ -1,4 +1,4 @@
-import os 
+import os
 import pandas as pd 
 import numpy as np 
 import matplotlib.pyplot as plt 
@@ -20,7 +20,7 @@ import shutil
 
 # Page Configuration
 st.set_page_config(
-    page_title="Final Project App",
+    page_title="Pharmaceutical Drugs Classification",
     layout="wide",
     initial_sidebar_state="auto"
 )
@@ -40,10 +40,10 @@ def load_trained_model():
 def load_multiple_models():
     models = {}
     model_paths = {
-        'model_1': 'saved_models/cnn_model.h5',
-        'model_2': 'saved_models/inception_model.h5',
-        'model_3': 'saved_models/mobilenet_model.h5',
-        'model_4': 'saved_models/efficientnet_model.h5'
+        'CNN Model': 'saved_models/cnn_model.h5',
+        'InceptionV3': 'saved_models/inception_model.h5',
+        'MobileNetV2': 'saved_models/mobilenet_model.h5',
+        'EfficientNet': 'saved_models/efficientnet_model.h5'
     }
 
     for model_name, path in model_paths.items():
@@ -104,8 +104,6 @@ def download_dataset():
 
         if not os.path.exists("data/Drug Vision/Data Combined"):
             api = KaggleApi()
-            api.set_config_value('username', st.secrets["kaggle"]["username"])
-            api.set_config_value("key", st.secrets["kaggle"]["key"])
             api.authenticate()
             api.dataset_download_files("vencerlanz09/pharmaceutical-drugs-and-vitamins-synthetic-images", 
                                      path="data", unzip=True)
@@ -178,56 +176,56 @@ def get_or_create_models():
             tf.keras.layers.GlobalAveragePooling2D(),
             tf.keras.layers.Dropout(0.3),
             tf.keras.layers.Dense(10, activation='softmax')
-        ])
+        ], name="CNN_Model")
         
         # Model 2 - Inception
         input_shape = (224, 224, 3)
         base_model = tf.keras.applications.InceptionV3(include_top=False,
-                                                       input_shape=input_shape,
-                                                       weights='imagenet')
+                                                     input_shape=input_shape,
+                                                     weights='imagenet')
         base_model.trainable = False
         inputs = tf.keras.layers.Input(shape=input_shape, name='input_layer')
         x = data_augmentation(inputs)
         x = base_model(x, training=False)
         x = tf.keras.layers.GlobalAveragePooling2D(name='global_average_pooling_layer')(x)
         outputs = tf.keras.layers.Dense(10, activation='softmax', name='output_layer')(x)
-        model_2 = tf.keras.Model(inputs, outputs)
+        model_2 = tf.keras.Model(inputs, outputs, name="InceptionV3")
 
-        # Model 3 - MobileNet (Fixed - was using InceptionV3)
+        # Model 3 - MobileNet
         base_model = tf.keras.applications.MobileNetV2(include_top=False,
-                                                       input_shape=input_shape,
-                                                       weights='imagenet')
+                                                     input_shape=input_shape,
+                                                     weights='imagenet')
         base_model.trainable = False
         inputs = tf.keras.layers.Input(shape=input_shape, name='input_layer')
         x = data_augmentation(inputs)
         x = base_model(x, training=False)
         x = tf.keras.layers.GlobalAveragePooling2D(name='global_average_pooling_layer')(x)
         outputs = tf.keras.layers.Dense(10, activation='softmax', name='output_layer')(x)
-        model_3 = tf.keras.Model(inputs, outputs)
+        model_3 = tf.keras.Model(inputs, outputs, name="MobileNetV2")
 
         # Model 4 - EfficientNet
         base_model = tf.keras.applications.EfficientNetV2B0(include_top=False,
-                                                       input_shape=input_shape,
-                                                       weights='imagenet')
+                                                          input_shape=input_shape,
+                                                          weights='imagenet')
         base_model.trainable = False
         inputs = tf.keras.layers.Input(shape=input_shape, name='input_layer')
         x = data_augmentation(inputs)
         x = base_model(x, training=False)
         x = tf.keras.layers.GlobalAveragePooling2D(name='global_average_pooling_layer')(x)
         outputs = tf.keras.layers.Dense(10, activation='softmax', name='output_layer')(x)
-        model_4 = tf.keras.Model(inputs, outputs)
+        model_4 = tf.keras.Model(inputs, outputs, name="EfficientNetV2")
 
         # Add models to session state
         st.session_state.models = {
-            'model_1': model_1,
-            'model_2': model_2,
-            'model_3': model_3,
-            'model_4': model_4 
+            'CNN Model': model_1,
+            'InceptionV3': model_2,
+            'MobileNetV2': model_3,
+            'EfficientNet': model_4 
         }
     return st.session_state.models 
 
 # Main app
-st.title("Pharmaceutical Drugs and Vitamins Synthetic Images App")
+st.title("Pharmaceutical Drugs and Vitamins Classification App")
 
 # Initialize data loading
 @st.cache_resource 
@@ -245,26 +243,26 @@ def load_data():
     test_datagen = tf.keras.preprocessing.image.ImageDataGenerator(rescale=1./255, validation_split=0.2)
 
     train_data = train_datagen.flow_from_directory(directory=dir_path,
-                                                    target_size=IMG_SIZE,
-                                                    batch_size=BATCH_SIZE,
-                                                    class_mode='categorical',
-                                                    subset='training')
+                                                target_size=IMG_SIZE,
+                                                batch_size=BATCH_SIZE,
+                                                class_mode='categorical',
+                                                subset='training')
 
     test_data = test_datagen.flow_from_directory(directory=dir_path,
-                                                    target_size=IMG_SIZE,
-                                                    batch_size=BATCH_SIZE,
-                                                    class_mode='categorical',
-                                                    subset='validation')
+                                                target_size=IMG_SIZE,
+                                                batch_size=BATCH_SIZE,
+                                                class_mode='categorical',
+                                                subset='validation')
     return train_data, test_data
 
 # Load data
 train_data, test_data = load_data()
 
 # Sidebar
-choice = st.sidebar.radio("Selections", ["Dataset Overview", "Fitting the Model", "Preprocessing", 
-                                         "Data Augmentation", "Transfer Learning", "Fine Tuning", 
-                                         "VLM (Vision Language Model)", "Drugs and Vitamins Detection",
-                                         "Performance Evaluation Metrics"])
+choice = st.sidebar.radio("Navigation", ["Dataset Overview", "Model Training", "Data Exploration", 
+                                       "Data Augmentation", "Transfer Learning", "Fine Tuning", 
+                                       "Vision Language Model", "Drug Classification",
+                                       "Performance Metrics"])
 
 if choice == "Dataset Overview":
     st.subheader("Dataset Overview")
@@ -297,8 +295,8 @@ if choice == "Dataset Overview":
     else:
         st.error("Dataset not found. Please ensure the dataset is downloaded.")
 
-elif choice == "Fitting the Model":
-    st.subheader("Fitting the Model")
+elif choice == "Model Training":
+    st.subheader("Model Training")
     
     # Add GPU checking
     if tf.config.list_physical_devices('GPU'):
@@ -308,7 +306,7 @@ elif choice == "Fitting the Model":
         
     models = get_or_create_models()
     # Create separate tabs for models
-    model_tabs = st.tabs([f"Model {i + 1}" for i in range(len(models))])
+    model_tabs = st.tabs([f"Model: {model_name}" for model_name in models.keys()])
     
     if st.button("Train all models"):
         with st.spinner("Training Models..."):
@@ -321,8 +319,8 @@ elif choice == "Fitting the Model":
                 
                 # Compile models
                 model.compile(loss='categorical_crossentropy',
-                              optimizer=tf.keras.optimizers.Adam(learning_rate=1e-4),
-                              metrics=['accuracy'])
+                            optimizer=tf.keras.optimizers.Adam(learning_rate=1e-4),
+                            metrics=['accuracy'])
                 
                 # Callbacks
                 checkpoint_path = f'checkpoints/{model_name}_checkpoint.weights.h5'
@@ -404,8 +402,8 @@ elif choice == "Fitting the Model":
             else:
                 st.warning("Model is not trained yet!")
 
-elif choice == "Preprocessing":
-    st.subheader("Preprocessing")
+elif choice == "Data Exploration":
+    st.subheader("Data Exploration")
     data_dir = "data/Drug Vision/Data Combined"
     
     if os.path.exists(data_dir):
@@ -483,223 +481,80 @@ elif choice == "Transfer Learning":
     if st.session_state.training_complete:
         st.success("Models have been trained! Check the training histories in session state.")
     else:
-        st.info("Train the models first in the 'Fitting the Model' section.")
+        st.info("Train the models first in the 'Model Training' section.")
 
 elif choice == "Fine Tuning":
     st.subheader("Fine Tuning")
-    if 'model_2' not in st.session_state.models:
-        st.error("Model 2 (InceptionV3) not found. Please train it first.")
+    
+    if not st.session_state.models or not st.session_state.training_complete:
+        st.warning("Please train the models first in the 'Model Training' section.")
         st.stop()
     
-    if 'model_2_history' not in st.session_state:
-        st.error("Model 2 training history not found. Please train it first.")
-        st.stop() 
+    model_options = list(st.session_state.models.keys())[1:]  # Skip the CNN model
+    selected_model = st.selectbox("Select a model to fine-tune:", model_options)
     
-    get_model_2 = st.session_state.models['model_2']
-    initial_history = st.session_state['model_2_history']
-
-    st.write("Before Fine-Tuning:")
-    get_model_2_layers = get_model_2.layers
-
-    for layer_number, layer in enumerate(get_model_2_layers):
-        st.write(f"Layer number: {layer_number} | Layer name: {layer.name} | Trainable?: {layer.trainable}")
-    get_model_2_base_model = get_model_2_layers[2] 
-
-    st.write(get_model_2_base_model.name) 
-    get_model_2_base_model.trainable = False
-
-    # How many layers are trainable in our model_2_base_model
-    st.write(len(get_model_2_base_model.trainable_variables))
-
-    # Check which layers are tunable (trainable)
-    for layer_number, layer in enumerate(get_model_2_layers):
-        st.write(layer_number, layer.name, layer.trainable)
-
-    # Make all the layers in model_2_base_model trainable
-    get_model_2_base_model.trainable = True
+    model = st.session_state.models[selected_model]
+    history = st.session_state[f"{selected_model}_history"]
     
-    # Freeze all layers except for the last 10
-    for layer in get_model_2_base_model.layers[:-10]:
-        layer.trainable = False
+    st.write(f"### Fine-Tuning {selected_model}")
     
-    get_model_2.compile(loss='categorical_crossentropy',
-                        optimizer=tf.keras.optimizers.Adam(learning_rate=1e-4),
-                        metrics=['accuracy'])
+    # Show model layers
+    with st.expander("Model Layers"):
+        for layer_number, layer in enumerate(model.layers):
+            st.write(f"Layer {layer_number}: {layer.name} | Trainable: {layer.trainable}")
     
-    for layer_number, layer in enumerate(get_model_2_base_model.layers):
-        print(layer_number, layer.name, layer.trainable)
+    # Fine-tuning options
+    st.write("### Fine-Tuning Options")
+    unfreeze_layers = st.number_input("Number of layers to unfreeze:", min_value=1, max_value=100, value=10)
+    learning_rate = st.number_input("Learning rate for fine-tuning:", min_value=1e-6, max_value=1e-2, value=1e-4, format="%.6f")
+    epochs = st.number_input("Number of epochs:", min_value=1, max_value=20, value=5)
     
-    st.write(len(get_model_2_layers))
-    
-    # Fine tune for another 5 epochs
-    initial_epochs = len(initial_history.history['loss'])
-    fine_tune_epochs = initial_epochs + 5
+    if st.button("Start Fine-Tuning"):
+        with st.spinner(f"Fine-tuning {selected_model}..."):
+            try:
+                # Get the base model (assuming it's the second layer)
+                base_model = model.layers[2]
+                
+                # Unfreeze the last N layers
+                base_model.trainable = True
+                for layer in base_model.layers[:-unfreeze_layers]:
+                    layer.trainable = False
+                
+                # Recompile the model with lower learning rate
+                model.compile(loss='categorical_crossentropy',
+                            optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate),
+                            metrics=['accuracy'])
+                
+                # Fine-tune the model
+                initial_epochs = len(history.history['loss'])
+                fine_tune_epochs = initial_epochs + epochs
+                
+                fine_history = model.fit(
+                    train_data,
+                    epochs=fine_tune_epochs,
+                    initial_epoch=initial_epochs,
+                    validation_data=test_data,
+                    validation_steps=int(0.25 * len(test_data))
+                )
+                
+                # Save the fine-tuned history
+                st.session_state[f"{selected_model}_history_fine"] = fine_history
+                
+                # Compare histories
+                st.success("Fine-tuning completed!")
+                st.write("### Training History Comparison")
+                
+                fig = compare_historys(
+                    original_history=history,
+                    new_history=fine_history,
+                    initial_epochs=initial_epochs
+                )
+                st.pyplot(fig)
+                
+            except Exception as e:
+                st.error(f"Error during fine-tuning: {e}")
 
-    with st.spinner("Fine-tune the InceptionV3 model"):
-        # Refit the model
-        history_fine_data_aug_2 = get_model_2.fit(train_data,
-                                                  epochs=fine_tune_epochs,
-                                                  validation_data=test_data,
-                                                  initial_epoch=initial_epochs,
-                                                  validation_steps=int(0.25 * len(test_data)))
-     # Save the fine-tuned history
-    st.session_state['model_2_history_fine'] = history_fine_data_aug_2
-    
-    # Compare histories
-    st.subheader("Training History Comparison")
-    try:
-        fig = compare_historys(
-            original_history=initial_history,
-            new_history=history_fine_data_aug_2,
-            initial_epochs=initial_epochs
-        )
-        st.pyplot(fig)
-    except Exception as e:
-        st.error(f"Could not plot history comparison: {e}")
-
-    st.write("------------------------------------------------------------------")
-    if 'model_3' not in st.session_state.models:
-        st.error("Model 3 (MobileNet) not found. Please train it first.")
-        st.stop()
-    
-    if 'model_3_history' not in st.session_state:
-        st.error("Model 3 training history not found. Please train it first.")
-        st.stop() 
-    
-    get_model_3 = st.session_state.models['model_3']
-    initial_history = st.session_state['model_3_history']
-
-    st.write("Before Fine-Tuning:")
-    get_model_3_layers = get_model_3.layers
-
-    for layer_number, layer in enumerate(get_model_3_layers):
-        st.write(f"Layer number: {layer_number} | Layer name: {layer.name} | Trainable?: {layer.trainable}")
-    get_model_3_base_model = get_model_3_layers[2] 
-
-    st.write(get_model_3_base_model.name) 
-    get_model_3_base_model.trainable = False
-
-    # How many layers are trainable in our model_3_base_model
-    st.write(len(get_model_3_base_model.trainable_variables))
-
-    # Check which layers are tunable (trainable)
-    for layer_number, layer in enumerate(get_model_3_layers):
-        st.write(layer_number, layer.name, layer.trainable)
-
-    # Make all the layers in model_3_base_model trainable
-    get_model_3_base_model.trainable = True
-    
-    # Freeze all layers except for the last 10
-    for layer in get_model_3_base_model.layers[:-10]:
-        layer.trainable = False
-    
-    get_model_3.compile(loss='categorical_crossentropy',
-                        optimizer=tf.keras.optimizers.Adam(learning_rate=1e-4),
-                        metrics=['accuracy'])
-    
-    for layer_number, layer in enumerate(get_model_3_base_model.layers):
-        print(layer_number, layer.name, layer.trainable)
-    
-    st.write(len(get_model_3_layers.layers))
-    
-    # Fine tune for another 5 epochs
-    initial_epochs = len(initial_history.history['loss'])
-    fine_tune_epochs = initial_epochs + 5
-
-    with st.spinner("Fine-tune the MobileNet model"):
-        # Refit the model
-        history_fine_data_aug_3 = get_model_3.fit(train_data,
-                                                  epochs=fine_tune_epochs,
-                                                  validation_data=test_data,
-                                                  initial_epoch=initial_epochs,
-                                                  validation_steps=int(0.25 * len(test_data)))
-     # Save the fine-tuned history
-    st.session_state['model_3_history_fine'] = history_fine_data_aug_3
-    
-    # Compare histories
-    st.subheader("Training History Comparison")
-    try:
-        fig = compare_historys(
-            original_history=initial_history,
-            new_history=history_fine_data_aug_3,
-            initial_epochs=initial_epochs
-        )
-        st.pyplot(fig)
-    except Exception as e:
-        st.error(f"Could not plot history comparison: {e}")
-
-    st.write("------------------------------------------------------------------")
-    if 'model_4' not in st.session_state.models:
-        st.error("Model 4 (EfficientNet) not found. Please train it first.")
-        st.stop()
-    
-    if 'model_4_history' not in st.session_state:
-        st.error("Model 4 training history not found. Please train it first.")
-        st.stop() 
-    
-    get_model_4 = st.session_state.models['model_4']
-    initial_history = st.session_state['model_4_history']
-
-    st.write("Before Fine-Tuning:")
-    get_model_4_layers = get_model_4.layers
-
-    for layer_number, layer in enumerate(get_model_4_layers):
-        st.write(f"Layer number: {layer_number} | Layer name: {layer.name} | Trainable?: {layer.trainable}")
-    get_model_4_base_model = get_model_4_layers[2] 
-
-    st.write(get_model_4_base_model.name) 
-    get_model_4_base_model.trainable = False
-
-    # How many layers are trainable in our model_4_base_model
-    st.write(len(get_model_4_base_model.trainable_variables))
-
-    # Check which layers are tunable (trainable)
-    for layer_number, layer in enumerate(get_model_4_layers):
-        st.write(layer_number, layer.name, layer.trainable)
-
-    # Make all the layers in model_4_base_model trainable
-    get_model_4_base_model.trainable = True
-    
-    # Freeze all layers except for the last 10
-    for layer in get_model_4_base_model.layers[:-10]:
-        layer.trainable = False
-    
-    get_model_4.compile(loss='categorical_crossentropy',
-                        optimizer=tf.keras.optimizers.Adam(learning_rate=1e-4),
-                        metrics=['accuracy'])
-    
-    for layer_number, layer in enumerate(get_model_4_base_model.layers):
-        print(layer_number, layer.name, layer.trainable)
-    
-    st.write(len(get_model_4_layers.layers))
-    
-    # Fine tune for another 5 epochs
-    initial_epochs = len(initial_history.history['loss'])
-    fine_tune_epochs = initial_epochs + 5
-
-    with st.spinner("Fine-tune the MobileNet model"):
-        # Refit the model
-        history_fine_data_aug_4 = get_model_4.fit(train_data,
-                                                  epochs=fine_tune_epochs,
-                                                  validation_data=test_data,
-                                                  initial_epoch=initial_epochs,
-                                                  validation_steps=int(0.25 * len(test_data)))
-     # Save the fine-tuned history
-    st.session_state['model_4_history_fine'] = history_fine_data_aug_4
-    
-    # Compare histories
-    st.subheader("Training History Comparison")
-    try:
-        fig = compare_historys(
-            original_history=initial_history,
-            new_history=history_fine_data_aug_4,
-            initial_epochs=initial_epochs
-        )
-        st.pyplot(fig)
-    except Exception as e:
-        st.error(f"Could not plot history comparison: {e}")
-
-elif choice == "VLM (Vision Language Model)":
+elif choice == "Vision Language Model":
     st.subheader("Vision Language Model (CLIP) Implementation")
 
     # Download CLIP model
@@ -724,13 +579,14 @@ elif choice == "VLM (Vision Language Model)":
     st.success("CLIP model loaded successfully!")
 
     # Create tabs
-    tab1, tab2, tab3 = st.tabs(["Image Analysis", "Text Search", "Batch Analysis"])
+    tab1, tab2 = st.tabs(["Image Classification", "Text-Based Search"])
 
     with tab1:
-        st.subheader("Image-Text Matching")
+        st.subheader("Image Classification with CLIP")
 
         # Upload image
         uploaded_file = st.file_uploader(
+            "Upload an image of a pharmaceutical drug:",
             type=['jpg', 'jpeg', 'png'],
             key="vlm_image"
         )
@@ -739,117 +595,65 @@ elif choice == "VLM (Vision Language Model)":
             image = Image.open(uploaded_file)
             st.image(image, caption="Uploaded image", use_column_width=True)
 
-            # Text prompts
-            st.subheader("Text Prompts")
-
-            # Predefined prompts
+            # Drug classes
             drug_classes = [
                 'Alaxan', 'Bactidol', 'Bioflu', 'Biogesic', 'DayZinc',
                 'Decolgen', 'Fish Oil', 'Kremil S', 'Medicol', 'Neozep'
             ]
+            
+            # Create prompts
+            prompts = [f"a photo of {drug} medication" for drug in drug_classes]
 
-            col1, col2 = st.columns(2)
+            if st.button("Analyze with CLIP"):
+                with st.spinner("Analyzing..."):
+                    try:
+                        # Process with CLIP
+                        inputs = clip_processor(
+                            text=prompts,
+                            images=image,
+                            return_tensors="pt",
+                            padding=True
+                        )
 
-            with col1:
-                st.write("**Auto Prompts:**")
-                auto_prompts = [f"a photo of {drug} medication" for drug in drug_classes]
+                        with torch.no_grad():
+                            outputs = clip_model(**inputs)
+                            logits_per_image = outputs.logits_per_image
+                            probs = logits_per_image.softmax(dim=1)
 
-                if st.button("Auto Analysis"):
-                    with st.spinner("Analyzing..."):
-                        try:
-                            # Process with CLIP
-                            inputs = clip_processor(
-                                text=auto_prompts,
-                                images=image,
-                                return_tensors="pt",
-                                padding=True
-                            )
+                        # Show results
+                        results_df = pd.DataFrame({
+                            'Drug': drug_classes,
+                            'Probability': [float(prob) for prob in probs[0]],
+                            'Probability (%)': [f"{float(prob)*100:.1f}%" for prob in probs[0]]
+                        })
 
-                            with torch.no_grad():
-                                outputs = clip_model(**inputs)
-                                logits_per_image = outputs.logits_per_image
-                                probs = logits_per_image.softmax(dim=1)
+                        results_df = results_df.sort_values('Probability', ascending=False)
 
-                            # Show results
-                            results_df = pd.DataFrame({
-                                'Drug': drug_classes,
-                                'Probability': [float(prob) for prob in probs[0]],
-                                'Probability (%)': [f"{float(prob)*100:.1f}%" for prob in probs[0]]
-                            })
+                        # Highlight highest probability
+                        st.success(
+                            f"Highest probability: **{results_df.iloc[0]['Drug']}** "
+                            f"({results_df.iloc[0]['Probability (%)']})"
+                        )
 
-                            results_df = results_df.sort_values('Probability', ascending=False)
+                        # Show table
+                        st.dataframe(results_df, use_container_width=True)
 
-                            # Highlight highest probability
-                            st.success(
-                                f"Highest probability: **{results_df.iloc[0]['Drug']}** "
-                                f"({results_df.iloc[0]['Probability (%)']})"
-                            )
+                        # Plot probabilities
+                        fig, ax = plt.subplots(figsize=(10, 6))
+                        bars = ax.bar(results_df['Drug'], results_df['Probability'])
+                        ax.set_title('CLIP Model Probabilities')
+                        ax.set_ylabel('Probability')
+                        ax.set_xlabel('Drug Classes')
+                        plt.xticks(rotation=45)
 
-                            # Show table
-                            st.dataframe(results_df, use_container_width=True)
+                        # Color highest probability
+                        bars[0].set_color('red')
 
-                            fig, ax = plt.subplots(figsize=(10, 6))
-                            bars = ax.bar(results_df['Drug'], results_df['Probability'])
-                            ax.set_title('CLIP Model Probabilities')
-                            ax.set_ylabel('Probability')
-                            ax.set_xlabel('Drug Classes')
-                            plt.xticks(rotation=45)
+                        plt.tight_layout()
+                        st.pyplot(fig)
 
-                            # Color highest probability
-                            bars[0].set_color('red')
-
-                            plt.tight_layout()
-                            st.pyplot(fig)
-
-                        except Exception as e:
-                            st.error(f"Analysis error: {e}")
-
-            with col2:
-                st.write("**Custom Prompt:**")
-                custom_prompt = st.text_input(
-                    "Text prompt:",
-                    value="a photo of medicine",
-                    help="Example: 'a photo of pain relief medication'"
-                )
-
-                if st.button("🔍 Custom Prompt Analysis"):
-                    if custom_prompt:
-                        with st.spinner("Analyzing..."):
-                            try:
-                                # Analyze with custom prompt
-                                inputs = clip_processor(
-                                    text=[custom_prompt],
-                                    images=image,
-                                    return_tensors="pt",
-                                    padding=True
-                                )
-
-                                with torch.no_grad():
-                                    outputs = clip_model(**inputs)
-                                    logits_per_image = outputs.logits_per_image
-                                    similarity = logits_per_image[0][0].item()
-
-                                similarity_percent = (similarity + 1) / 2 * 100  # [-1,1] → [0,100]
-
-                                st.metric(
-                                    label="Similarity Score",
-                                    value=f"{similarity_percent:.1f}%",
-                                    delta=f"Raw score: {similarity:.3f}"
-                                )
-
-                                st.progress(similarity_percent / 100)
-
-                                if similarity_percent > 70:
-                                    st.success("🎯 High similarity!")
-                                elif similarity_percent > 40:
-                                    st.info("⚠️ Medium similarity")
-                                else:
-                                    st.warning("❌ Low similarity")
-
-                            except Exception as e:
-                                st.error(f"Analysis error: {e}")
-                    else:
-                        st.warning("Please enter a prompt!")
+                    except Exception as e:
+                        st.error(f"Analysis error: {e}")
 
     with tab2:
         st.subheader("Text-Based Image Search")
@@ -857,45 +661,53 @@ elif choice == "VLM (Vision Language Model)":
         # Load dataset images
         if os.path.exists("data/Drug Vision/Data Combined"):
             search_query = st.text_input(
-                "Search query:",
+                "Search for a drug type:",
                 value="pain relief medication",
                 help="Enter the type of drug you're looking for"
             )
 
-            num_results = st.slider("Number of results:", 1, 10, 5)
+            num_results = st.slider("Number of results to show:", 1, 10, 5)
 
-            if st.button("🔍 Search"):
+            if st.button("Search Dataset"):
                 with st.spinner("Searching..."):
                     try:
                         all_images = []
                         all_paths = []
+                        all_classes = []
 
                         data_dir = "data/Drug Vision/Data Combined"
                         for class_name in os.listdir(data_dir):
                             class_path = os.path.join(data_dir, class_name)
                             if os.path.isdir(class_path):
-                                for img_file in os.listdir(class_path)[:5]:
+                                for img_file in os.listdir(class_path)[:20]:  # Limit to 20 images per class
                                     if img_file.lower().endswith(('.jpg', '.jpeg', '.png')):
                                         img_path = os.path.join(class_path, img_file)
                                         try:
                                             img = Image.open(img_path).resize((224, 224))
                                             all_images.append(img)
                                             all_paths.append(img_path)
+                                            all_classes.append(class_name)
                                         except:
                                             continue
 
                         if all_images:
-                            inputs = clip_processor(
-                                text=[search_query],
-                                images=all_images,
-                                return_tensors="pt",
-                                padding=True
-                            )
+                            # Process in batches to avoid memory issues
+                            batch_size = 32
+                            similarities = []
+                            
+                            for i in range(0, len(all_images), batch_size):
+                                batch_images = all_images[i:i+batch_size]
+                                inputs = clip_processor(
+                                    text=[search_query],
+                                    images=batch_images,
+                                    return_tensors="pt",
+                                    padding=True
+                                )
 
-                            with torch.no_grad():
-                                outputs = clip_model(**inputs)
-                                logits_per_image = outputs.logits_per_image
-                                similarities = logits_per_image[0].cpu().numpy()
+                                with torch.no_grad():
+                                    outputs = clip_model(**inputs)
+                                    batch_similarities = outputs.logits_per_image[0].cpu().numpy()
+                                    similarities.extend(batch_similarities)
 
                             top_indices = np.argsort(similarities)[::-1][:num_results]
 
@@ -906,130 +718,21 @@ elif choice == "VLM (Vision Language Model)":
                                 with cols[i % 3]:
                                     st.image(all_images[idx], use_column_width=True)
                                     similarity_score = (similarities[idx] + 1) / 2 * 100
-                                    st.write(f"**Similarity: {similarity_score:.1f}%**")
-                                    st.write(f"Path: {os.path.basename(all_paths[idx])}")
+                                    st.write(f"**Class:** {all_classes[idx]}")
+                                    st.write(f"**Similarity:** {similarity_score:.1f}%")
+                                    st.write(f"**File:** {os.path.basename(all_paths[idx])}")
 
                         else:
-                            st.error("No images found!")
+                            st.error("No images found in dataset!")
 
                     except Exception as e:
                         st.error(f"Search error: {e}")
         else:
             st.warning("Dataset not found!")
 
-    with tab3:
-        st.subheader("Batch Analysis")
-
-        uploaded_files = st.file_uploader(
-            "Upload multiple images:",
-            type=['jpg', 'jpeg', 'png'],
-            accept_multiple_files=True,
-            key="vlm_batch"
-        )
-
-        if uploaded_files:
-            st.write(f"Number of uploaded images: {len(uploaded_files)}")
-
-            batch_prompt = st.text_input(
-                "Batch analysis prompt:",
-                value="a photo of pharmaceutical drug",
-                help="Prompt to use for all images"
-            )
-
-            if st.button("🔍 Batch Analysis"):
-                with st.spinner("Analyzing batch..."):
-                    try:
-                        images = []
-                        image_names = []
-
-                        for uploaded_file in uploaded_files:
-                            image = Image.open(uploaded_file)
-                            images.append(image)
-                            image_names.append(uploaded_file.name)
-
-                        inputs = clip_processor(
-                            text=[batch_prompt] * len(images),
-                            images=images,
-                            return_tensors="pt",
-                            padding=True
-                        )
-
-                        with torch.no_grad():
-                            outputs = clip_model(**inputs)
-                            similarities = outputs.logits_per_image.diagonal().cpu().numpy()
-
-                        results_df = pd.DataFrame({
-                            'Image': image_names,
-                            'Similarity': similarities,
-                            'Similarity (%)': [(sim + 1) / 2 * 100 for sim in similarities]
-                        })
-
-                        results_df = results_df.sort_values('Similarity', ascending=False)
-
-                        st.subheader("📊 Batch Analysis Results")
-                        st.dataframe(results_df, use_container_width=True)
-
-                        fig, ax = plt.subplots(figsize=(12, 6))
-                        bars = ax.bar(range(len(results_df)), results_df['Similarity (%)'])
-                        ax.set_title('Batch Analysis Results')
-                        ax.set_ylabel('Similarity (%)')
-                        ax.set_xlabel('Images')
-                        ax.set_xticks(range(len(results_df)))
-                        ax.set_xticklabels(results_df['Image'], rotation=45, ha='right')
-
-                        bars[0].set_color('green')
-
-                        plt.tight_layout()
-                        st.pyplot(fig)
-
-                        csv = results_df.to_csv(index=False)
-                        st.download_button(
-                            label="📥 Download as CSV",
-                            data=csv,
-                            file_name="batch_analysis_results.csv",
-                            mime="text/csv"
-                        )
-
-                    except Exception as e:
-                        st.error(f"Batch analysis error: {e}")
-        else:
-            st.info("Please upload images for batch analysis!")
-
-elif choice == "Drugs and Vitamins Detection":
-    st.subheader("Drugs and Vitamins Detection")
-    st.write("Upload an image to classify:")
-
-    uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
-
-    if uploaded_file is not None:
-        image = Image.open(uploaded_file)
-        st.image(image, caption="Uploaded Image", use_container_width=True)
-
-        if st.session_state.training_complete and st.session_state.models:
-            img_array = tf.keras.utils.img_to_array(image.resize((224, 224)))
-            img_array = tf.expand_dims(img_array, 0) / 255.0
-
-            st.write("Predictions from different models:")
-
-            if train_data is not None:
-                class_names = list(train_data.class_indices.keys())
-
-                for model_name, model in st.session_state.models.items():
-                    try:
-                        predictions = model.predict(img_array)
-                        predicted_class = class_names[np.argmax(predictions[0])]
-                        confidence = np.max(predictions[0])
-
-                        st.write(f"**{model_name}:** {predicted_class} (Confidence: {confidence:.2%})")
-                    except Exception as e:
-                        st.error(f"Error with {model_name}: {e}")
-        else:
-            st.warning("Please train the models first.")
-
-
-elif choice == "Drugs and Vitamins Detection":
-    st.subheader("Drugs and Vitamins Detection")
-    st.write("Upload an image to classify:")
+elif choice == "Drug Classification":
+    st.subheader("Drug and Vitamin Classification")
+    st.write("Upload an image to classify using our trained models:")
     
     uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
     
@@ -1043,10 +746,12 @@ elif choice == "Drugs and Vitamins Detection":
             img_array = tf.expand_dims(img_array, 0) / 255.0
             
             # Get predictions from all models
-            st.write("Predictions from different models:")
+            st.write("### Predictions from different models:")
             
             if train_data is not None:
                 class_names = list(train_data.class_indices.keys())
+                
+                results = []
                 
                 for model_name, model in st.session_state.models.items():
                     try:
@@ -1054,17 +759,30 @@ elif choice == "Drugs and Vitamins Detection":
                         predicted_class = class_names[np.argmax(predictions[0])]
                         confidence = np.max(predictions[0])
                         
-                        st.write(f"**{model_name}:** {predicted_class} (Confidence: {confidence:.2%})")
+                        results.append({
+                            "Model": model_name,
+                            "Prediction": predicted_class,
+                            "Confidence": f"{confidence:.2%}"
+                        })
                     except Exception as e:
                         st.error(f"Error with {model_name}: {e}")
+                
+                # Display results in a table
+                results_df = pd.DataFrame(results)
+                st.table(results_df)
+                
+                # Show consensus prediction
+                if not results_df.empty:
+                    consensus = results_df['Prediction'].mode()[0]
+                    st.success(f"Consensus Prediction: {consensus}")
         else:
-            st.warning("Please train the models first.")
+            st.warning("Please train the models first in the 'Model Training' section.")
 
-elif choice == "Performance Evaluation Metrics":
+elif choice == "Performance Metrics":
     st.subheader("Performance Evaluation Metrics")
 
     if not st.session_state.models or not st.session_state.training_complete:
-        st.warning("First, train the models.")
+        st.warning("Please train the models first in the 'Model Training' section.")
         st.stop()
 
     models_performance = {
@@ -1073,13 +791,13 @@ elif choice == "Performance Evaluation Metrics":
         'Precision': [],
         'Recall': [],
         'F1 Score': [],
-        'ROC-AUC Curve': []
+        'ROC-AUC': []
     }
 
     y_true = test_data.classes
 
-    for i, (model_name, model) in enumerate(st.session_state.models.items()):
-        st.write(f"Calculating: {model_name}")
+    for model_name, model in st.session_state.models.items():
+        st.write(f"Evaluating: {model_name}")
         y_pred = model.predict(test_data, verbose=0)
         y_pred_classes = np.argmax(y_pred, axis=1)
 
@@ -1089,34 +807,41 @@ elif choice == "Performance Evaluation Metrics":
         f1 = f1_score(y_true, y_pred_classes, average='weighted')
 
         try:
-            roc_auc_curve = roc_auc_score(
+            roc_auc = roc_auc_score(
                 y_true,
-                y_pred,  # ehtimal vektoru!
+                y_pred,
                 multi_class='ovr',
                 average='weighted'
             )
         except Exception as e:
-            roc_auc_curve = 0.0
+            roc_auc = 0.0
 
         models_performance['Model'].append(model_name)
         models_performance['Accuracy'].append(accuracy)
         models_performance['Precision'].append(precision)
         models_performance['Recall'].append(recall)
         models_performance['F1 Score'].append(f1)
-        models_performance['ROC-AUC Curve'].append(roc_auc_curve)
+        models_performance['ROC-AUC'].append(roc_auc)
 
     df_perf_metrics = pd.DataFrame(models_performance)
 
-    st.dataframe(df_perf_metrics.style.format(precision=2))
+    st.dataframe(df_perf_metrics.style.format({
+        'Accuracy': '{:.2%}',
+        'Precision': '{:.2%}',
+        'Recall': '{:.2%}',
+        'F1 Score': '{:.2%}',
+        'ROC-AUC': '{:.2%}'
+    }))
 
     metrics_choice = st.selectbox(
-        "Select a metric:",
-        ['Accuracy', 'Precision', 'Recall', 'F1 Score', 'ROC-AUC Curve']
+        "Select a metric to visualize:",
+        ['Accuracy', 'Precision', 'Recall', 'F1 Score', 'ROC-AUC']
     )
 
     fig, ax = plt.subplots(figsize=(10, 6))
     bars = ax.bar(df_perf_metrics['Model'], df_perf_metrics[metrics_choice], color='skyblue')
     ax.set_title(f"{metrics_choice} Comparison Across Models")
+    ax.set_ylim(0, 1)
     plt.xticks(rotation=45)
 
     for bar in bars:
@@ -1129,5 +854,3 @@ elif choice == "Performance Evaluation Metrics":
 
     plt.tight_layout()
     st.pyplot(fig)
-    
-    
